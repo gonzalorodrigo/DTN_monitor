@@ -8,27 +8,34 @@ class FileMonitor:
     def stop(self):
         self._keep_running=False
     
-    def monitor_file_name(self, file_route, expected_size, monitor_output_file,
+    
+    def monitor_file_name_async(self, file_route, expected_size,
+                                monitor_output_file,
                       format_string="{}:{}:{}", sample_time_ms=1000,
-                      use_modif_stamp=False, async_call=False, max_timeout=1.0):
-        if async_call:
-            self.th = threading.Thread(target=self.monitor_file_name,
+                      use_modif_stamp=False, async_call=False,
+                      max_timeout_ms=1000,
+                      th_monitor_steps=100):
+        
+        self.th = threading.Thread(target=self.monitor_file_name,
                                        file_route=file_route,
                                         expected_size=expected_size,
                                         monitor_output_file=monitor_output_file,
                                         format_string=format_string,
                                         sample_time_ms=sample_time_ms,
-                                        use_modif_stamp=use_modif_stamp,
-                                        async_call=False)
-            self.th.start()
-            monitor_step=0.1
-            while not self._keep_running:
-                max_timeout-=monitor_step
-                if max_timeout<0.0:
-                    return False
-                time.sleep(monitor_step)
-            return True
-            
+                                        use_modif_stamp=use_modif_stamp)
+        self.th.start()
+        monitor_step=0.1
+        while not self._keep_running:
+            max_timeout_ms-=th_monitor_steps
+            if max_timeout_ms<0.0:
+                return False
+            time.sleep(float(monitor_step)/1000)
+        return True
+    
+    def monitor_file_name(self, file_route, expected_size, monitor_output_file,
+                      format_string="{}:{}:{}", sample_time_ms=1000,
+                      use_modif_stamp=False):
+
         self._keep_running = True
         last_modif_stamp=None
         while self._keep_running:
