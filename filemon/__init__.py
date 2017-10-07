@@ -10,6 +10,9 @@ import time
 
 class FileMonitor:
     
+    def __init__(self):
+        self._keep_running=False
+    
     def stop(self):
         self._keep_running=False
     
@@ -22,12 +25,13 @@ class FileMonitor:
                       th_monitor_steps=100):
         
         self.th = threading.Thread(target=self.monitor_file_name,
-                                       file_route=file_route,
-                                        expected_size=expected_size,
-                                        monitor_output_file=monitor_output_file,
+                                       args=[file_route,
+                                        expected_size,
+                                        monitor_output_file],
+                                        kwargs=dict(
                                         format_string=format_string,
                                         sample_time_ms=sample_time_ms,
-                                        use_modif_stamp=use_modif_stamp)
+                                        use_modif_stamp=use_modif_stamp))
         self.th.start()
         while not self._keep_running:
             max_timeout_ms-=th_monitor_steps
@@ -45,6 +49,8 @@ class FileMonitor:
         while self._keep_running:
             time_stamp=time.time()
             (file_size, modif_stamp) = self.get_file_size(file_route)
+            if modif_stamp is None:
+                modif_stamp=time_stamp
             if use_modif_stamp:
                 if last_modif_stamp==modif_stamp:
                     continue
@@ -57,6 +63,8 @@ class FileMonitor:
             time.sleep(float(sample_time_ms/1000))
 
     def get_file_size(self, file_route):
+        if not os.path.exists(file_route):
+            return (0, None)
         statinfo = os.stat(file_route)
         return (statinfo.st_size, statinfo.st_mtime)
     
@@ -64,7 +72,7 @@ class FileMonitor:
                      format_string):
         with open(output_file, 'a+') as f:
             f.write(format_string.format(time_stamp, size, percentage,
-                                         format_string))
+                                         format_string)+"\n")
         
     
             

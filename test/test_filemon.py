@@ -12,11 +12,15 @@ class TestFileMonitor(TestFileGeneric):
     def setUp(self):
         self._register_tmp_folder(self.tmp_folder)
         self._create_empty(self.tmp_folder, is_folder=True)
-        
+        self._fm=None
+    
+    def tearDown(self):
+        if self._fm:
+            self._fm.stop()
+            time.sleep(1)
     def test_get_file_size(self):
         
         monitored_file = os.path.join(self.tmp_folder, "file.txt")
-        self._register_tmp_file(monitored_file)
         self._create_empty(monitored_file)
         
         fm = FileMonitor()
@@ -31,7 +35,6 @@ class TestFileMonitor(TestFileGeneric):
         
     def test_write_sample(self):
         monitored_file = os.path.join(self.tmp_folder, "file.txt")
-        self._register_tmp_file(monitored_file)
         
         fm = FileMonitor()
         time_stamp = 5000
@@ -40,10 +43,55 @@ class TestFileMonitor(TestFileGeneric):
         
         with open(monitored_file, 'r') as f:
             lines = f.readlines()
+            lines = [x.rstrip('\n') for x in lines]
             
             self.assertEqual(lines,
-                             ["5000:10:5.0"
+                             ["5000:10:5.0",
                               "5002:12:6.0" ])
+    
+    def test_monitor_file_name(self):
+        monitored_file = os.path.join(self.tmp_folder, "file.txt")
+        self._create_empty(monitored_file)
+        output_file = os.path.join(self.tmp_folder, "output.txt")
+        
+        self._fm = FileMonitor()
+        self._fm.monitor_file_name_async(monitored_file, 10, output_file,
+                      format_string="{},{},{}", sample_time_ms=1000)
+        
+        
+        time.sleep(0.5)
+        ref_ts = time.time()
+        with open(monitored_file, 'a') as f:
+            f.write("a")
+        time.sleep(1)
+        with open(output_file, 'r') as f:
+            lines = f.readlines()
+            lines = [x.rstrip('\n') for x in lines]
+            self.assertEqual([",".join(x.split(",")[1:]) for x in lines],
+                             ["0,0.0",
+                              "1,10.0"])
+            self.assertTrue(float(lines[0].split(",")[0])-ref_ts < 2)
+            self.assertTrue(float(lines[0].split(",")[0])-(ref_ts+1) 
+                                   < 2)
+        with open(monitored_file, 'a') as f:
+            f.write("b")
+        time.sleep(1)
+    
+        with open(output_file, 'r') as f:
+            lines = f.readlines()
+            lines = [x.rstrip('\n') for x in lines]
+            self.assertEqual([",".join(x.split(",")[1:]) for x in lines],
+                             ["0,0.0",
+                              "1,10.0",
+                              "2,20.0"])
+            self.assertTrue(float(lines[0].split(",")[0])-ref_ts < 1)
+            self.assertTrue(float(lines[1].split(",")[0])-(ref_ts+1) 
+                                   < 1)
+            self.assertTrue(float(lines[2].split(",")[0])-(ref_ts+3) 
+                                   < 1)
+        
+        
+
             
             
               
