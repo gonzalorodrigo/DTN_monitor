@@ -1,3 +1,8 @@
+"""
+python -m unittest test.test_filemon
+
+"""
+
 import os
 import threading
 import time
@@ -12,7 +17,7 @@ class FileMonitor:
     def monitor_file_name_async(self, file_route, expected_size,
                                 monitor_output_file,
                       format_string="{}:{}:{}", sample_time_ms=1000,
-                      use_modif_stamp=False, async_call=False,
+                      use_modif_stamp=False,
                       max_timeout_ms=1000,
                       th_monitor_steps=100):
         
@@ -24,12 +29,11 @@ class FileMonitor:
                                         sample_time_ms=sample_time_ms,
                                         use_modif_stamp=use_modif_stamp)
         self.th.start()
-        monitor_step=0.1
         while not self._keep_running:
             max_timeout_ms-=th_monitor_steps
             if max_timeout_ms<0.0:
                 return False
-            time.sleep(float(monitor_step)/1000)
+            time.sleep(float(th_monitor_steps)/1000)
         return True
     
     def monitor_file_name(self, file_route, expected_size, monitor_output_file,
