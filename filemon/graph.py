@@ -1,11 +1,4 @@
-import csv
-import datetime
-import errno
-import itertools
-from multiprocessing import Process
-from os import path
-import subprocess
-import sys, os
+import sys
 import threading
 import time
 
@@ -20,10 +13,13 @@ interface = "all"
 
 class DataPlot(threading.Thread):
     
-    def __init__(self, file_names, *args, **keywords):
+    def __init__(self, file_names, file_monitors, *args, **keywords):
         self._file_names = file_names
+        self._file_monitors = file_monitors
         if not type(self._file_names) is list:
             self._file_names = [self._file_names]
+        if not type(self._file_monitors) is list:
+            self._file_monitors = [self._file_monitors]
         threading.Thread.__init__(self, *args, **keywords)
         self.killed = False
 
@@ -49,7 +45,8 @@ class DataPlot(threading.Thread):
         self.__run_backup()
         self.run = self.__run_backup
         while not self.killed:
-            monitor_data = {x:self.get_data_file(x) for x in self._file_names}
+            monitor_data = {x:self.get_data_file(x) 
+                            for x in self._file_monitors}
             num_plots = len(monitor_data)
             plots_per_line = 2
             plot_lines = int(np.ceil(float(num_plots) /
@@ -61,8 +58,9 @@ class DataPlot(threading.Thread):
             axes=self._flatten_list(axes)
             f.set_size_inches(width_inches, height_inches)
             
-            for (ax, file_name) in zip(axes, monitor_data.keys()):
-                mon_data = monitor_data[file_name]
+            for (ax, file_name, file_monitor) in zip(axes, self._file_names,
+                                                     monitor_data.keys()):
+                mon_data = monitor_data[file_monitor]
                 ax_percent = ax.twinx()
                 ax.plot(mon_data["time_stamps"],mon_data["throughputs"])
                 ax.set_title(file_name)
@@ -78,8 +76,8 @@ class DataPlot(threading.Thread):
                 ax_percent.set_ylim((0.0, 100.0))
             
             
-            display.clear_output(wait=True)
             display.display(plt.show())
+            display.clear_output(wait=True)
             # plt.show()
             time.sleep(0.5)
             
