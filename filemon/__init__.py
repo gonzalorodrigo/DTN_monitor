@@ -53,6 +53,10 @@ class FileMonitor:
         last_time_stamp=None
         last_file_size=None
         
+        with open(monitor_output_file, "w"):
+            pass
+            
+        
         while self._keep_running:
             time_stamp=time.time()
             (file_size, modif_stamp) = self.get_file_size(file_route)

@@ -63,11 +63,20 @@ class DataPlot(threading.Thread):
             
             for (ax, file_name) in zip(axes, monitor_data.keys()):
                 mon_data = monitor_data[file_name]
+                ax_percent = ax.twinx()
                 ax.plot(mon_data["time_stamps"],mon_data["throughputs"])
                 ax.set_title(file_name)
                 ax.grid(alpha=0.5)
                 ax.set_xlabel('time')
                 ax.set_ylabel('bytes/s')
+                
+                ax_percent.plot(mon_data["time_stamps"],
+                                mon_data["file_percents"],
+                                linestyle="-",
+                                color="red")
+                ax_percent.set_ylabel('% completed"')
+                ax_percent.set_ylim((0.0, 100.0))
+            
             
             display.clear_output(wait=True)
             display.display(plt.show())
