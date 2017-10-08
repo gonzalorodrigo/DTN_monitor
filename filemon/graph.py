@@ -63,11 +63,11 @@ class DataPlot(threading.Thread):
             
             for (ax, file_name) in zip(axes, monitor_data.keys()):
                 mon_data = monitor_data[file_name]
-                ax.plot(mon_data["time_stamps"],mon_data["file_sizes"])
+                ax.plot(mon_data["time_stamps"],mon_data["throughputs"])
                 ax.set_title(file_name)
                 ax.grid(alpha=0.5)
                 ax.set_xlabel('time')
-                ax.set_ylabel('Bytes')
+                ax.set_ylabel('bytes/s')
             
             display.clear_output(wait=True)
             display.display(plt.show())
