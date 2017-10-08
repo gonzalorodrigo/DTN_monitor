@@ -3,9 +3,13 @@ python -m unittest test.test_filemon
 
 """
 
+import csv
+import itertools
 import os
 import threading
 import time
+
+
 
 
 class FileMonitor:
@@ -73,6 +77,23 @@ class FileMonitor:
         with open(output_file, 'a+') as f:
             f.write(format_string.format(time_stamp, size, percentage,
                                          format_string)+"\n")
+            
+    @classmethod
+    def read_monitor_file(cls, file_route,  separator=":"):
+        time_stamps = []
+        file_sizes= []
+        file_percents = []
+        with open(file_route, "r") as f:
+            reader1, reader2 = itertools.tee(csv.reader(f,
+                                                        delimiter=separator))
+            for row in reader2:
+                if (len(next(reader1)) != 3):
+                    continue
+                time_stamps.append(float(row[0].strip()))
+                file_sizes.append(int(row[1].strip()))
+                file_percents.append(float(row[2].strip()))
+        return dict(time_stamps=time_stamps, file_sizes=file_sizes,
+                    file_percents=file_percents ) 
         
     
             

@@ -89,6 +89,51 @@ class TestFileMonitor(TestFileGeneric):
                                    < 1)
             self.assertTrue(float(lines[2].split(",")[0])-(ref_ts+3) 
                                    < 1)
+            
+    def test_read_monitor_file(self):
+        output_file = os.path.join(self.tmp_folder, "output.txt")
+        with open(output_file, 'w') as f:
+            f.write("10.0:0:0.0\n")
+            f.write("11.0:10:15.0\n")
+            f.write("12.0:20:25.0\n")
+        
+        read_data=FileMonitor.read_monitor_file(output_file)
+        self.assertEqual(read_data,
+                         dict(time_stamps=[10.0,11.0,12.0],
+                              file_sizes=[0,10,20],
+                              file_percents=[0.0,15.0, 25.0]))
+        
+        
+    def test_read_monitoring_process(self):
+        monitored_file = os.path.join(self.tmp_folder, "file.txt")
+        self._create_empty(monitored_file)
+        output_file = os.path.join(self.tmp_folder, "output.txt")
+        
+        self._fm = FileMonitor()
+        self._fm.monitor_file_name_async(monitored_file, 10, output_file,
+                      format_string="{}:{}:{}", sample_time_ms=1000)
+        
+        
+        time.sleep(0.5)
+        ref_ts = time.time()
+        with open(monitored_file, 'a') as f:
+            f.write("a")
+        time.sleep(1)
+
+        with open(monitored_file, 'a') as f:
+            f.write("b")
+        time.sleep(1)
+        self._fm.stop()
+        
+        read_data=FileMonitor.read_monitor_file(output_file)
+        self.assertEqual(read_data["file_sizes"], [0,1,2])
+        self.assertEqual(read_data["file_percents"], [0.0,10.0,20.0])
+        self.assertTrue(read_data["time_stamps"][0]-ref_ts < 1)
+        self.assertTrue(read_data["time_stamps"][1]-(ref_ts+1) 
+                                   < 1)
+        self.assertTrue(read_data["time_stamps"][2]-(ref_ts+3) 
+                                   < 1)
+        
         
         
 
