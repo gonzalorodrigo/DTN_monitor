@@ -23,7 +23,7 @@ class FileMonitor:
     
     def monitor_file_name_async(self, file_route, expected_size,
                                 monitor_output_file,
-                      format_string="{}:{}:{}", sample_time_ms=1000,
+                      format_string="{}:{}:{}:{}", sample_time_ms=1000,
                       use_modif_stamp=False,
                       max_timeout_ms=1000,
                       th_monitor_steps=100):
@@ -45,11 +45,14 @@ class FileMonitor:
         return True
     
     def monitor_file_name(self, file_route, expected_size, monitor_output_file,
-                      format_string="{}:{}:{}", sample_time_ms=1000,
+                      format_string="{}:{}:{}:{}:", sample_time_ms=1000,
                       use_modif_stamp=False):
 
         self._keep_running = True
         last_modif_stamp=None
+        last_time_stamp=None
+        last_file_size=None
+        
         while self._keep_running:
             time_stamp=time.time()
             (file_size, modif_stamp) = self.get_file_size(file_route)
@@ -61,9 +64,20 @@ class FileMonitor:
                 time_stamp = modif_stamp
                 last_modif_stamp = modif_stamp
             percentage = 100.0*float(file_size)/float(expected_size)
+            throughput=0
+            
+            if (last_time_stamp is None or last_file_size is None):
+                throughput=float(file_size)
+            else:
+                bytes_written = file_size-last_file_size
+                time_step = time_stamp - last_time_stamp
+                throughput=float(bytes_written)/float(time_step)
+            
+            last_time_stamp = time_stamp
+            last_file_size = file_size
             
             self.write_sample(monitor_output_file, time_stamp, file_size,
-                              percentage, format_string)
+                              percentage, throughput, format_string)
             time.sleep(float(sample_time_ms/1000))
 
     def get_file_size(self, file_route):
@@ -73,9 +87,10 @@ class FileMonitor:
         return (statinfo.st_size, statinfo.st_mtime)
     
     def write_sample(self, output_file, time_stamp, size, percentage,
-                     format_string):
+                     throughput, format_string):
         with open(output_file, 'a+') as f:
             f.write(format_string.format(time_stamp, size, percentage,
+                                         throughput,
                                          format_string)+"\n")
             
     @classmethod
@@ -83,17 +98,19 @@ class FileMonitor:
         time_stamps = []
         file_sizes= []
         file_percents = []
+        throughputs = []
         with open(file_route, "r") as f:
             reader1, reader2 = itertools.tee(csv.reader(f,
                                                         delimiter=separator))
             for row in reader2:
-                if (len(next(reader1)) != 3):
+                if (len(next(reader1)) != 4):
                     continue
                 time_stamps.append(float(row[0].strip()))
                 file_sizes.append(int(row[1].strip()))
                 file_percents.append(float(row[2].strip()))
+                throughputs.append(float(row[3].strip()))
         return dict(time_stamps=time_stamps, file_sizes=file_sizes,
-                    file_percents=file_percents ) 
+                    file_percents=file_percents, throughputs=throughputs ) 
         
     
             

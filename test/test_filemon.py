@@ -38,16 +38,18 @@ class TestFileMonitor(TestFileGeneric):
         
         fm = FileMonitor()
         time_stamp = 5000
-        fm.write_sample(monitored_file,time_stamp, 10, 5.0,"{}:{}:{}")
-        fm.write_sample(monitored_file,time_stamp+2, 12, 6.0,"{}:{}:{}")
+        fm.write_sample(monitored_file,time_stamp, 10, 5.0, 20.0, 
+                        "{}:{}:{}:{}")
+        fm.write_sample(monitored_file,time_stamp+2, 12, 6.0, 21.0,
+                        "{}:{}:{}:{}")
         
         with open(monitored_file, 'r') as f:
             lines = f.readlines()
             lines = [x.rstrip('\n') for x in lines]
             
             self.assertEqual(lines,
-                             ["5000:10:5.0",
-                              "5002:12:6.0" ])
+                             ["5000:10:5.0:20.0",
+                              "5002:12:6.0:21.0" ])
     
     def test_monitor_file_name(self):
         monitored_file = os.path.join(self.tmp_folder, "file.txt")
@@ -93,15 +95,16 @@ class TestFileMonitor(TestFileGeneric):
     def test_read_monitor_file(self):
         output_file = os.path.join(self.tmp_folder, "output.txt")
         with open(output_file, 'w') as f:
-            f.write("10.0:0:0.0\n")
-            f.write("11.0:10:15.0\n")
-            f.write("12.0:20:25.0\n")
+            f.write("10.0:0:0.0:0.0\n")
+            f.write("11.0:10:15.0:10.0\n")
+            f.write("12.0:20:25.0:20.0\n")
         
         read_data=FileMonitor.read_monitor_file(output_file)
         self.assertEqual(read_data,
                          dict(time_stamps=[10.0,11.0,12.0],
                               file_sizes=[0,10,20],
-                              file_percents=[0.0,15.0, 25.0]))
+                              file_percents=[0.0,15.0, 25.0],
+                              throughputs=[0.0,10.0,20.0]))
         
         
     def test_read_monitoring_process(self):
@@ -111,7 +114,7 @@ class TestFileMonitor(TestFileGeneric):
         
         self._fm = FileMonitor()
         self._fm.monitor_file_name_async(monitored_file, 10, output_file,
-                      format_string="{}:{}:{}", sample_time_ms=1000)
+                      sample_time_ms=1000)
         
         
         time.sleep(0.5)
@@ -128,6 +131,8 @@ class TestFileMonitor(TestFileGeneric):
         read_data=FileMonitor.read_monitor_file(output_file)
         self.assertEqual(read_data["file_sizes"], [0,1,2])
         self.assertEqual(read_data["file_percents"], [0.0,10.0,20.0])
+        for (a,b) in zip(read_data["throughputs"], [0.0, 1, 1]):
+            self.assertAlmostEqual(a,b,places=2)
         self.assertTrue(read_data["time_stamps"][0]-ref_ts < 1)
         self.assertTrue(read_data["time_stamps"][1]-(ref_ts+1) 
                                    < 1)
