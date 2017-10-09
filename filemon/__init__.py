@@ -72,10 +72,15 @@ class FileMonitor:
             
             if (last_time_stamp is None or last_file_size is None):
                 throughput=float(file_size)
+                last_time_stamp = time_stamp
+                last_file_size = file_size
+                continue
             else:
                 bytes_written = file_size-last_file_size
                 time_step = time_stamp - last_time_stamp
                 throughput=float(bytes_written)/float(time_step)
+                if throughput<0:
+                    throughput=0.0
             
             last_time_stamp = time_stamp
             last_file_size = file_size

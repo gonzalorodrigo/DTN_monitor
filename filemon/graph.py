@@ -33,8 +33,11 @@ class DataPlot(threading.Thread):
         return filemon.FileMonitor.read_monitor_file(file_route)
                        
     def _flatten_list(self,l):
-        if not type(l) is list:
+        if not type(l) is list and not type(l) is np.ndarray:
             l = [l] 
+            return l
+        if type(l) is np.ndarray:
+            return list(l.flatten())
         flat_list = []
         for sublist in l:
             for item in sublist:
@@ -57,7 +60,6 @@ class DataPlot(threading.Thread):
             f, (axes) = plt.subplots(plot_lines, plots_per_line, sharex='col')
             axes=self._flatten_list(axes)
             f.set_size_inches(width_inches, height_inches)
-            
             for (ax, file_name, file_monitor) in zip(axes, self._file_names,
                                                      monitor_data.keys()):
                 mon_data = monitor_data[file_monitor]
