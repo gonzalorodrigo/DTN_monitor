@@ -22,11 +22,17 @@ class DataPlot(threading.Thread):
             self._file_monitors = [self._file_monitors]
         threading.Thread.__init__(self, *args, **keywords)
         self.killed = False
+        self._deadline = None
+    
+    def set_deadline(self, deadline):
+        self._deadline=deadline
 
     def start(self):
         self.__run_backup = self.run
         self.run = self.__run
+        self._start_time=time.time()
         threading.Thread.start(self)
+        
 
     
     def get_data_file(self, file_route):
@@ -76,6 +82,11 @@ class DataPlot(threading.Thread):
                                 color="red")
                 ax_percent.set_ylabel('% completed"')
                 ax_percent.set_ylim((0.0, 100.0))
+                
+                if (self._deadline):
+                    ax.axvline(self._deadline)
+                    extra= (self._deadline-self._start_time)*0.10
+                    ax.set_xlim((self._start_time, self._deadline+extra))
             
             
             display.display(plt.show())
