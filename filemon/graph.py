@@ -13,7 +13,9 @@ interface = "all"
 
 class DataPlot(threading.Thread):
     
-    def __init__(self, file_names, file_monitors, *args, **keywords):
+    def __init__(self, file_names, file_monitors, y_label="bytes/s",
+                 y_factor=None,y_lim=None,
+                 *args, **keywords):
         self._file_names = file_names
         self._file_monitors = file_monitors
         if not type(self._file_names) is list:
@@ -24,6 +26,9 @@ class DataPlot(threading.Thread):
         self.killed = False
         self._deadline = None
         self._deadline_list = None
+        self._y_label = y_label
+        self._y_factor = y_factor
+        self._y_lim = y_lim
     
     def set_deadline(self, deadline):
         self._deadline=deadline
@@ -58,9 +63,15 @@ class DataPlot(threading.Thread):
         sys.settrace(self.globaltrace)
         self.__run_backup()
         self.run = self.__run_backup
+        
+        x_lim=None
+        if (self._deadline_list):
+            x_max = max([(deadline-self._start_time)*0.10+deadline
+                         for deadline in self._deadline_list])
+            x_lim = (self._start_time, x_max)
         while not self.killed:
-            monitor_data = {x:self.get_data_file(x) 
-                            for x in self._file_monitors}
+            monitor_data = [self.get_data_file(x) 
+                            for x in self._file_monitors]
             num_plots = len(monitor_data)
             plots_per_line = 2
             plot_lines = int(np.ceil(float(num_plots) /
@@ -75,16 +86,20 @@ class DataPlot(threading.Thread):
                 deadline_list = [None]*len(self._file_names)
             else:
                 deadline_list = self._deadline_list
-            for (ax, file_name, file_monitor,
-                 deadline) in zip(axes, self._file_names, monitor_data.keys(),
+            for (ax, file_name, mon_data,
+                 deadline) in zip(axes, self._file_names, monitor_data,
                                   deadline_list):
-                mon_data = monitor_data[file_monitor]
                 ax_percent = ax.twinx()
-                ax.plot(mon_data["time_stamps"],mon_data["throughputs"])
+                y_data = mon_data["throughputs"]
+                if self._y_factor:
+                    y_data = [float(y)*self._y_factor for y in y_data]                
+                ax.plot(mon_data["time_stamps"],y_data)
                 ax.set_title(file_name)
                 ax.grid(alpha=0.5)
                 ax.set_xlabel('time')
-                ax.set_ylabel('bytes/s')
+                ax.set_ylabel(self._y_label)
+                if self._y_lim:
+                    ax.set_ylim(self._y_lim)
                 
                 ax_percent.plot(mon_data["time_stamps"],
                                 mon_data["file_percents"],
@@ -100,8 +115,11 @@ class DataPlot(threading.Thread):
                 
                 if (deadline):
                     ax.axvline(deadline)
-                    extra= (deadline-self._start_time)*0.10
-                    ax.set_xlim((self._start_time, deadline+extra))
+                    if x_lim:
+                        ax.set_xlim(x_lim)
+                    else:
+                        extra= (deadline-self._start_time)*0.10
+                        ax.set_xlim((self._start_time, deadline+extra))
             
             
             display.display(plt.show())
