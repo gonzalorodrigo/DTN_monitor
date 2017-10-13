@@ -23,9 +23,14 @@ class DataPlot(threading.Thread):
         threading.Thread.__init__(self, *args, **keywords)
         self.killed = False
         self._deadline = None
+        self._deadline_list = None
     
     def set_deadline(self, deadline):
         self._deadline=deadline
+    
+    def set_deadline_list(self, deadline_list):
+        self._deadline_list=deadline_list
+
 
     def start(self):
         self.__run_backup = self.run
@@ -66,8 +71,13 @@ class DataPlot(threading.Thread):
             f, (axes) = plt.subplots(plot_lines, plots_per_line, sharex='col')
             axes=self._flatten_list(axes)
             f.set_size_inches(width_inches, height_inches)
-            for (ax, file_name, file_monitor) in zip(axes, self._file_names,
-                                                     monitor_data.keys()):
+            if self._deadline_list is None:
+                deadline_list = [None]*len(self._file_names)
+            else:
+                deadline_list = self._deadline_list
+            for (ax, file_name, file_monitor,
+                 deadline) in zip(axes, self._file_names, monitor_data.keys(),
+                                  deadline_list):
                 mon_data = monitor_data[file_monitor]
                 ax_percent = ax.twinx()
                 ax.plot(mon_data["time_stamps"],mon_data["throughputs"])
@@ -87,6 +97,11 @@ class DataPlot(threading.Thread):
                     ax.axvline(self._deadline)
                     extra= (self._deadline-self._start_time)*0.10
                     ax.set_xlim((self._start_time, self._deadline+extra))
+                
+                if (deadline):
+                    ax.axvline(deadline)
+                    extra= (deadline-self._start_time)*0.10
+                    ax.set_xlim((self._start_time, deadline+extra))
             
             
             display.display(plt.show())

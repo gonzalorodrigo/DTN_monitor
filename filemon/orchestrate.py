@@ -5,7 +5,8 @@ from filemon import FileMonitor
 import filemon.graph as gr
 
 
-def monitor_files(file_routes, expected_sizes, titles=None):
+def monitor_files(file_routes, expected_sizes, titles=None,
+                  deadline_list=None):
     file_monitors = [] 
     for (file_route, i, expected_size) in zip(file_routes,
                                               range(len(file_routes)),
@@ -20,5 +21,6 @@ def monitor_files(file_routes, expected_sizes, titles=None):
     if file_routes is None:
         titles=file_routes
     thread  = gr.DataPlot(titles, file_monitors)
+    thread.set_deadline_list(deadline_list)
     thread.daemon = True
     thread.start()
