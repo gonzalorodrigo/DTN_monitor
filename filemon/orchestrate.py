@@ -1,3 +1,5 @@
+"""Module to coordinate monitoring and plotting for multiple files."""
+
 import ntpath
 import time
 
@@ -8,6 +10,27 @@ import filemon.graph as gr
 def monitor_files(file_routes, expected_sizes, titles=None,
                   deadline_list=None, y_label="bytes/s", y_factor=None,
                   y_lim=None):
+    """ Starts file monitors for a number of files and then draws plots on the
+    obtained measuring samples. Argumens are list that must be of the same
+    size and which items in the same position correspond to the monitoring of
+    the same file.
+    
+    It's execution is non blocking.
+    
+    Args:
+      file_routes: list of strings pointing to the files to be monitored.
+      expected_sizes: list of integers describing the size of the moniored files
+        in bytes.
+    titles: list of strings to be used as titles of the subplots..
+    deadeline_list: list of time objects indicating the timestamp of the
+      deadlines of each file.
+    y_label: string to be used as y_label in the throughput axis of each
+      subplot.
+    y_factor: if set to a flaot, all throughput data will be multiplied by this
+      float before plotting.
+    y_lim: if set to a tuple (y_min, y_max), it will be used as the limits of
+      the y_axis of all the subplotes. 
+    """
     file_monitors = [] 
     for (file_route, i, expected_size) in zip(file_routes,
                                               range(len(file_routes)),
