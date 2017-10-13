@@ -1,3 +1,8 @@
+"""
+python -m unittest test.test_filemon
+
+"""
+
 import os
 from test import TestFileGeneric
 import time

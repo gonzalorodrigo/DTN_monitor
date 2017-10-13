@@ -4,6 +4,7 @@ import time
 
 from IPython import display
 import filemon
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import psutil
@@ -69,6 +70,7 @@ class DataPlot(threading.Thread):
             x_max = max([(deadline-self._start_time)*0.10+deadline
                          for deadline in self._deadline_list])
             x_lim = (self._start_time, x_max)
+
         while not self.killed:
             monitor_data = [self.get_data_file(x) 
                             for x in self._file_monitors]
