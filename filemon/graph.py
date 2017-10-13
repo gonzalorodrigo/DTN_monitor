@@ -68,7 +68,7 @@ class DataPlot(threading.Thread):
             width_inches = plots_per_line * 7.5
             height_inches = plot_lines * 5
              
-            f, (axes) = plt.subplots(plot_lines, plots_per_line, sharex='col')
+            f, (axes) = plt.subplots(plot_lines, plots_per_line)
             axes=self._flatten_list(axes)
             f.set_size_inches(width_inches, height_inches)
             if self._deadline_list is None:
