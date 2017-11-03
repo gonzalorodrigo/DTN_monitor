@@ -1,6 +1,8 @@
 """Module to coordinate monitoring and plotting for multiple files."""
 
 import ntpath
+import signal
+import sys
 import time
 
 from filemon import FileMonitor
@@ -8,6 +10,19 @@ import filemon.graph as gr
 import filemon.rest_reporter as rr
 
 
+class IntCapturer(object):
+    
+    
+    def program_capture_stop(self, objects_to_stop):
+        self._objects_to_stop=objects_to_stop
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.pause()
+    
+    def signal_handler(self, signal, frame):
+        for obj in self._objects_to_stop:
+            obj.stop_threads()
+        print ("Exit of threads completed")
+        
 def monitor_files(file_routes, expected_sizes, titles=None,
                   deadline_list=None, y_label="bytes/s", y_factor=None,
                   y_lim=None, rest_reporting=False,
@@ -35,6 +50,7 @@ def monitor_files(file_routes, expected_sizes, titles=None,
       the y_axis of all the subplotes. 
     """
     file_monitors = [] 
+    monitor_objects=[]
     for (file_route, i, expected_size) in zip(file_routes,
                                               range(len(file_routes)),
                                               expected_sizes):
@@ -42,6 +58,7 @@ def monitor_files(file_routes, expected_sizes, titles=None,
         fm = FileMonitor()
         fm.monitor_file_name_async(file_route, expected_size,
                                         file_monitor)
+        monitor_objects.append(fm)
         file_monitors.append(file_monitor)
     
     time.sleep(1.0)
@@ -61,3 +78,6 @@ def monitor_files(file_routes, expected_sizes, titles=None,
     thread.set_deadline_list(deadline_list)
     thread.daemon = True
     thread.start()
+    cap=IntCapturer()
+    cap.program_capture_stop([thread]+monitor_objects)
+    

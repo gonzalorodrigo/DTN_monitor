@@ -80,7 +80,8 @@ class DataPlot(threading.Thread):
         self._start_time=time.time()
         threading.Thread.start(self)
         
-
+    def stop_threads(self):
+        self.killed=True
     
     def get_data_file(self, file_route):
         """ Returns the data of the file_route a dictionary of lists."""
@@ -174,10 +175,10 @@ class DataPlot(threading.Thread):
                         extra= (deadline-self._start_time)*0.10
                         ax.set_xlim((self._start_time, deadline+extra))
             
-            
-            display.display(plt.show())
-            display.clear_output(wait=True)
-            time.sleep(self._refresh_rate)
+            if not self.killed:
+                display.display(plt.show())
+                display.clear_output(wait=True)
+                time.sleep(self._refresh_rate)
             
     def globaltrace(self, frame, why, arg):
         if why == 'call':

@@ -133,6 +133,9 @@ class FileMonitor:
                               percentage, throughput, format_string)
             time.sleep(float(sample_time_ms/1000))
 
+    def stop_threads(self):
+        self._keep_running=False
+        
     def get_file_size(self, file_route):
         """Returns the size in byts of a file pointed by file_route"""
         
