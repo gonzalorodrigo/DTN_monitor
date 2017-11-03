@@ -48,6 +48,8 @@ def monitor_files(file_routes, expected_sizes, titles=None,
       float before plotting.
     y_lim: if set to a tuple (y_min, y_max), it will be used as the limits of
       the y_axis of all the subplotes. 
+    rest_reporting: if True the measurements will be posted to a REST service
+      on http://hostname:port/api/file/[file_id]
     """
     file_monitors = [] 
     monitor_objects=[]
