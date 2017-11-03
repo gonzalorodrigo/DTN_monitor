@@ -96,7 +96,10 @@ class DataPlot(threading.Thread):
         for sublist in l:
             for item in sublist:
                 flat_list.append(item)
-        return flat_list     
+        return flat_list
+    def do_other_actions(self, data_dict):  
+        pass 
+      
     def __run(self):
         """ Main plotting action"""
         
@@ -114,7 +117,9 @@ class DataPlot(threading.Thread):
 
         while not self.killed:
             """ Reads data """
-            monitor_data = [self.get_data_file(x) 
+            data_dict={x:self.get_data_file(x) for x in self._file_monitors }
+            
+            monitor_data = [data_dict[x]
                             for x in self._file_monitors]
             
             """ Calculates the plot disposition depending on the number of
