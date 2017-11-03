@@ -1,15 +1,33 @@
 """Module to coordinate monitoring and plotting for multiple files."""
 
 import ntpath
+import signal
+import sys
 import time
 
 from filemon import FileMonitor
 import filemon.graph as gr
+import filemon.rest_reporter as rr
 
 
+class IntCapturer(object):
+    
+    
+    def program_capture_stop(self, objects_to_stop):
+        self._objects_to_stop=objects_to_stop
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.pause()
+    
+    def signal_handler(self, signal, frame):
+        for obj in self._objects_to_stop:
+            obj.stop_threads()
+        print ("Exit of threads completed")
+        
 def monitor_files(file_routes, expected_sizes, titles=None,
                   deadline_list=None, y_label="bytes/s", y_factor=None,
-                  y_lim=None):
+                  y_lim=None, rest_reporting=False,
+                  hostname="127.0.0.1", port=5000,
+                  file_ids=None):
     """ Starts file monitors for a number of files and then draws plots on the
     obtained measuring samples. Argumens are list that must be of the same
     size and which items in the same position correspond to the monitoring of
@@ -30,8 +48,11 @@ def monitor_files(file_routes, expected_sizes, titles=None,
       float before plotting.
     y_lim: if set to a tuple (y_min, y_max), it will be used as the limits of
       the y_axis of all the subplotes. 
+    rest_reporting: if True the measurements will be posted to a REST service
+      on http://hostname:port/api/file/[file_id]
     """
     file_monitors = [] 
+    monitor_objects=[]
     for (file_route, i, expected_size) in zip(file_routes,
                                               range(len(file_routes)),
                                               expected_sizes):
@@ -39,13 +60,26 @@ def monitor_files(file_routes, expected_sizes, titles=None,
         fm = FileMonitor()
         fm.monitor_file_name_async(file_route, expected_size,
                                         file_monitor)
+        monitor_objects.append(fm)
         file_monitors.append(file_monitor)
     
     time.sleep(1.0)
     if file_routes is None:
         titles=file_routes
-    thread  = gr.DataPlot(titles, file_monitors, y_label=y_label, 
+    if not rest_reporting:
+        thread  = gr.DataPlot(titles, file_monitors, y_label=y_label, 
                           y_factor=y_factor, y_lim=y_lim)
+    else:
+        if file_ids:
+            file_id_dict={x:y for (x,y) in zip(file_monitors, file_ids)}
+        thread  = rr.RestReporter(titles, file_monitors, y_label=y_label, 
+                          y_factor=y_factor, y_lim=y_lim)
+        thread.set_rest_server_ip(hostname, port)
+        thread.set_files_rest_ids(file_id_dict)
+        
     thread.set_deadline_list(deadline_list)
     thread.daemon = True
     thread.start()
+    cap=IntCapturer()
+    cap.program_capture_stop([thread]+monitor_objects)
+    

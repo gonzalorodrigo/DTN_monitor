@@ -80,7 +80,8 @@ class DataPlot(threading.Thread):
         self._start_time=time.time()
         threading.Thread.start(self)
         
-
+    def stop_threads(self):
+        self.killed=True
     
     def get_data_file(self, file_route):
         """ Returns the data of the file_route a dictionary of lists."""
@@ -96,7 +97,10 @@ class DataPlot(threading.Thread):
         for sublist in l:
             for item in sublist:
                 flat_list.append(item)
-        return flat_list     
+        return flat_list
+    def do_other_actions(self, data_dict):  
+        pass 
+      
     def __run(self):
         """ Main plotting action"""
         
@@ -114,9 +118,11 @@ class DataPlot(threading.Thread):
 
         while not self.killed:
             """ Reads data """
-            monitor_data = [self.get_data_file(x) 
-                            for x in self._file_monitors]
+            data_dict={x:self.get_data_file(x) for x in self._file_monitors }
             
+            monitor_data = [data_dict[x]
+                            for x in self._file_monitors]
+            self.do_other_actions(data_dict)
             """ Calculates the plot disposition depending on the number of
             plots."""
             num_plots = len(monitor_data)
@@ -169,10 +175,10 @@ class DataPlot(threading.Thread):
                         extra= (deadline-self._start_time)*0.10
                         ax.set_xlim((self._start_time, deadline+extra))
             
-            
-            display.display(plt.show())
-            display.clear_output(wait=True)
-            time.sleep(self._refresh_rate)
+            if not self.killed:
+                display.display(plt.show())
+                display.clear_output(wait=True)
+                time.sleep(self._refresh_rate)
             
     def globaltrace(self, frame, why, arg):
         if why == 'call':
