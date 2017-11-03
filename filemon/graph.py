@@ -122,8 +122,6 @@ class DataPlot(threading.Thread):
             monitor_data = [data_dict[x]
                             for x in self._file_monitors]
             self.do_other_actions(data_dict)
-            time.sleep(1)
-            continue
             """ Calculates the plot disposition depending on the number of
             plots."""
             num_plots = len(monitor_data)

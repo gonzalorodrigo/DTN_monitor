@@ -52,7 +52,7 @@ def monitor_files(file_routes, expected_sizes, titles=None,
                           y_factor=y_factor, y_lim=y_lim)
     else:
         if file_ids:
-            file_id_dict={x:y for (x,y) in zip(file_ids, file_routes)}
+            file_id_dict={x:y for (x,y) in zip(file_monitors, file_ids)}
         thread  = rr.RestReporter(titles, file_monitors, y_label=y_label, 
                           y_factor=y_factor, y_lim=y_lim)
         thread.set_rest_server_ip(hostname, port)
