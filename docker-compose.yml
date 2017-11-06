@@ -13,7 +13,8 @@ services:
       - "8000:8000"
  #   depends_on:
  #     - db
- #   environment:   
+    environment:   
+      - JUPYTERHUB_LOCATION=/home/myuser
  #     - FILE_SHELL_COMMANDS=/shared/command.txt
  #     - FILE_SHELL_OUTPUT=/shared/output.txt
  #     - FILE_SHELL_DIR=/code/remoteshelloverfs
