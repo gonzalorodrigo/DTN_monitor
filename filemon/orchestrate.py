@@ -88,10 +88,20 @@ def monitor_files(file_routes, expected_sizes, titles=None,
     cap.program_capture_stop([thread]+monitor_objects)
     
 class RestPuller(threading.Thread):
-    
+    """ Class that keeps doing a get on a URL and posts the obtained JSON
+    as a dictionary to a programmed callback."""
     def __init__(self, hostname, port, api_url, changes_receiver,
                  update_period_s=1,
                  *args, **keywords):
+        """
+        Args:
+          hostname: hostname which rest server will be questioned.
+          port: port of the rest server
+          api_url: string to append to the right of the URL.
+          chages_receiver: function with one argument that will be executed
+            each time that a get is completed.
+          update_period_s: number of seconds to wait between gets.
+        """
         self._hostname=hostname
         self._port=port
         self._api_url=api_url
@@ -143,13 +153,30 @@ class RestOrchestrator(object):
     def init(self, measurement_id_list, title_list, y_lim=None,
                              y_label="bytes/s", y_factor=None,
                              rest_reporting=False,
-                             hostname="127.0.0.1", port=5000):
+                             hostname="127.0.0.1", port=5000,
+                             refresh_rate=0.5):
+        """
+        Args:
+          measurement_id_list: list of strings of the measurement ids.
+          title_list: List of titles to use in the graphs.
+          y_lim: if set to tuple(min, max), all y-axes of all subplots will
+            use this limits.
+          y_label: string to be used as y_label in each plot.
+          y_factor: if set to a float, throughput values will be multoplied by
+            y_factor before plotting.
+          rest_reporting: if True the measurements will be posted to a REST service
+            on http://hostname:port/api/file/[file_id]
+          refresh_rate: float seconds between to plot refreshes.
+          hostname: host to report to
+          port: port of the server to report to
+        """
         self._id_list=measurement_id_list
         self._y_lim=y_lim
         self._data_dic={}
         self._rest_reporting=rest_reporting
         self._hostname=hostname
         self._port=port 
+        self._refresh_rate=refresh_rate
         for (m_id, title, i) in zip(self._id_list, title_list,
                                  range(len(self._id_list))):
             self._data_dic[m_id] = dict(active=False,
@@ -201,11 +228,13 @@ class RestOrchestrator(object):
             thread  = gr.DataPlot(title_list,
                                  monitor_files,
                                   y_label=y_label, 
-                                  y_factor=y_factor, y_lim=y_lim)
+                                  y_factor=y_factor, y_lim=y_lim,
+                                  refresh_rate=self._refresh_rate)
         else:
             file_id_dict={x:y for (x,y) in zip(monitor_files, self._id_list)}
             thread  = rr.RestReporter(title_list, monitor_files, y_label=y_label, 
-                              y_factor=y_factor, y_lim=y_lim)
+                              y_factor=y_factor, y_lim=y_lim,
+                              refresh_rate=self._refresh_rate)
             thread.set_rest_server_ip(self._hostname, self._port)
             thread.set_files_rest_ids(file_id_dict)
             
