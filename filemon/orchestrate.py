@@ -163,21 +163,15 @@ class RestOrchestrator(object):
         self.create_graph_manager(rest_reporting, y_label, y_factor, y_lim,
                                   title_list)
         self._rest_puller=None
-        #self.program_capture_stop()
         
-    def program_capture_stop(self):
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.pause()
+        
+    
     def get_field(self, field):
         return [self._data_dic[x][field] for x in self._id_list] 
     def get_file_monitor_files(self):
         return [x.monitor_output_file for x in self.get_field("file_monitor")]
-    
-    def signal_handler(self, signal, frame):
-        self.stop_theads()
-        print ("Exit of threads completed")
           
-    def stop_theads(self):
+    def stop_threads(self):
         self._graph_manager.stop_threads()
         if self._rest_puller:
             self._rest_puller.stop_threads()
