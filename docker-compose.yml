@@ -5,7 +5,7 @@ services:
     build: .
     volumes:
       - ./files_storage:/tmp/files_storage
- #     - .:/code
+      - .:/home/myuser/DTN_monitor
  #     - ./remoteshelloverfs/shared:/shared
  #     - ./import_images:/tmp/ncem_images
  #     - ./preview_images:/tmp/preview_images

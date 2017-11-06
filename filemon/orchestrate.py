@@ -1,14 +1,16 @@
 """Module to coordinate monitoring and plotting for multiple files."""
 
+
 import ntpath
 import signal
 import sys
+import threading
 import time
 
 from filemon import FileMonitor
 import filemon.graph as gr
 import filemon.rest_reporter as rr
-
+import requests
 
 class IntCapturer(object):
     
@@ -83,7 +85,45 @@ def monitor_files(file_routes, expected_sizes, titles=None,
     cap=IntCapturer()
     cap.program_capture_stop([thread]+monitor_objects)
     
+class RestPuller(threading.Thread):
     
+    def __init__(self, hostname, port, api_url, changes_receiver,
+                 update_period_s=1,
+                 *args, **keywords):
+        self._hostname=hostname
+        self._port=port
+        self._api_url=api_url
+        self._killed=False
+        self._update_period_s=update_period_s
+        threading.Thread.__init__(self, *args, **keywords)
+    
+    def get_url(self):
+        return ("http://{}:{}/{}".format(self._hostname, self._port,
+                                         self._api_url))
+    def stop_threads(self):
+        self._killed=True
+    def __run(self):
+        while not self._killed:
+            changes_dict = self._get_changes()
+            if changes_dict:
+                self.changes_receiver.process_changes(changes_dict)
+            if not self.killed:
+                time.sleep(self._update_period_s)
+    def get_changes(self):
+        get_url = self.get_url()
+        try:
+            results = requests.put(get_url)
+        except requests.exceptions.RequestException:
+            None
+        if results.status_code==200:
+            return self.decode_reponse(results.content)
+            
+        else: 
+            return None
+    def decode_response(self, content):
+        return None
+    
+
 class RestOrchestrator(object):
     """ This class reads from a REST call what files should be monitored and
     configures filemonitors, plot, and reporting funcitons automatically.
@@ -91,7 +131,7 @@ class RestOrchestrator(object):
     appear, they are re-applied.
     """
     
-    def set_initial_settings(self, measurement_id_list, title_list, y_lim=None,
+    def init(self, measurement_id_list, title_list, y_lim=None,
                              y_label="bytes/s", y_factor=None,
                              rest_reporting=False,
                              hostname="127.0.0.1", port=5000):
@@ -100,11 +140,10 @@ class RestOrchestrator(object):
         self._data_dic={}
         self._rest_reporting=rest_reporting
         self._hostname=hostname
-        self._port=port
-        
-        for (m_id, title, i) in (self._id_list, title_list,
+        self._port=port 
+        for (m_id, title, i) in zip(self._id_list, title_list,
                                  range(len(self._id_list))):
-            self._data_dc[m_id] = dict(active=False,
+            self._data_dic[m_id] = dict(active=False,
                                        file_route=None,
                                        deadline=time.time()+100,
                                        file_monitor=None,
@@ -114,7 +153,8 @@ class RestOrchestrator(object):
         self.create_initial_monitors()
         self.create_graph_manager(rest_reporting, y_label, y_factor, y_lim,
                                   title_list)
-        self.program_capture_stop()
+        self._rest_puller=None
+        #self.program_capture_stop()
         
     def program_capture_stop(self):
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -126,6 +166,8 @@ class RestOrchestrator(object):
     
     def signal_handler(self, signal, frame):
         self._graph_manager.stop_threads()
+        if self._rest_puller:
+            self._rest_puller.stop_threads()
         for obj in self.get_field("file_monitor"):
             obj.stop_threads()
         print ("Exit of threads completed")
@@ -142,7 +184,7 @@ class RestOrchestrator(object):
 
     def create_initial_monitors(self):
         for (m_id, m_data) in self._data_dic.items():
-            mon = self.create_monitor("/tmp/fake.{}",format(m_id),
+            mon = self.create_monitor("/tmp/fake.{}".format(m_id),
                                       1)
             m_data["file_monitor"]=mon
     
@@ -155,7 +197,6 @@ class RestOrchestrator(object):
                                   y_label=y_label, 
                                   y_factor=y_factor, y_lim=y_lim)
         else:
-            
             file_id_dict={x:y for (x,y) in zip(monitor_files, self._id_list)}
             thread  = rr.RestReporter(title_list, monitor_files, y_label=y_label, 
                               y_factor=y_factor, y_lim=y_lim)
@@ -167,19 +208,49 @@ class RestOrchestrator(object):
         self._graph_manager=thread
         thread.start()
     
-    
+    def process_changes(self, changes_dict):
+        self._graph_manager.disable_updates()
+        for (key, changes) in changes_dict.items():
+            file_route=None
+            expected_size=None
+            deadline=None
+            if "file_route" in changes:
+                file_route=changes["file_route"]
+            if "expected_size" in changes:
+                expected_size=changes["expected_size"]
+            if "deadline" in changes:
+                deadline=changes["deadline"]
+            self.reconfigure(key,
+                              file_route=file_route, 
+                              expected_size=expected_size,
+                              deadline=deadline,
+                              do_lock=False)
+        self._graph_manager.enable_updates() 
     def reconfigure(self, measurement_id, file_route=None, 
-                    expected_size=None, deadline=None):
+                    expected_size=None, deadline=None, do_lock=True):
         """(re)configures a measurement"""
+        if do_lock:
+            self._graph_manager.disable_updates()
         if file_route is not None or expected_size is not None:
             new_monitor=self.create_monitor(file_route, expected_size)
             old_monitor=self._data_dic[measurement_id]["file_monitor"]
             self._data_dic[measurement_id]["file_monitor"]=new_monitor
-            self._graph_manager._file_monitors=self.get_file_monitor_files()
+            monitor_files=self.get_file_monitor_files()
+            self._graph_manager._file_monitors=monitor_files
+            if self._rest_reporting:
+                file_id_dict={x:y for (x,y) in
+                              zip(monitor_files, self._id_list)}
+                self._graph_manager.set_files_rest_ids(file_id_dict)
+                self._graph_manager._index_dict=None
             old_monitor.stop_threads()
+            
         
         if deadline is not None:
-            self._graph_manager._deadline_list=self.get_field("deadline")
+            self._data_dic[measurement_id]["deadline"]=deadline
+            self._graph_manager.set_deadline_list(self.get_field("deadline"))
+        self._graph_manager._start_time=time.time()
+        if do_lock:
+            self._graph_manager.enable_updates()
             
         
             
