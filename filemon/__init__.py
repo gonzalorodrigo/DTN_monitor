@@ -54,6 +54,7 @@ class FileMonitor:
         Returns: True if the monitoring subthread starts successfuly.
         
         """
+        self.monitor_output_file=monitor_output_file
         self.th = threading.Thread(target=self.monitor_file_name,
                                        args=[file_route,
                                         expected_size,

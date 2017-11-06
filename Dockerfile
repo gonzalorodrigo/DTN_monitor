@@ -1,9 +1,6 @@
 FROM python:3
 ENV PYTHONUNBUFFERED 1
-RUN useradd -ms /bin/bash myuser
-RUN echo "myuser:Docker!" | chpasswd
-
-RUN mkdir /home/myuser/code
+RUN mkdir /code
 WORKDIR /code
 
 
@@ -15,13 +12,17 @@ RUN npm install -g configurable-http-proxy
 RUN apt-get -y install libfreetype6-dev
 RUN apt-get -y install python3-matplotlib
 RUN apt-get -y install pciutils
-ADD requirements.txt WORKDIR /home/myuser/code
-ADD . /home/myuser/code
+ADD requirements.txt /code/
 RUN pip install -r requirements.txt
 
+RUN useradd -ms /bin/bash myuser
+RUN echo "myuser:Docker!" | chpasswd
 USER myuser
 WORKDIR /home/myuser
+RUN mkdir /home/myuser/DTN_monitor
+WORKDIR /home/myuser/DTN_monitor
+ADD . /home/myuser/DTN_monitor
 
 USER root
-WORKDIR /home/myuser/code/
+WORKDIR /home/myuser/DTN_monitor
 CMD ["jupyterhub"]
