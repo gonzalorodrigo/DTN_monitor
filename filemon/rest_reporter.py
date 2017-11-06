@@ -26,7 +26,6 @@ class RestReporter(DataPlot):
         test_value=getattr(self, "_index_dict", None)
         if test_value is None:
             self._index_dict={x:0 for x in data_dict.keys()}
-            
         for data_id, data_list in data_dict.items():
             index=self._index_dict[data_id]
             if index<len(data_list["time_stamps"]):

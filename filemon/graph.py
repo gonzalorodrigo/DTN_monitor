@@ -1,3 +1,4 @@
+from multiprocessing.synchronize import BoundedSemaphore
 import sys
 import threading
 import time
@@ -56,6 +57,7 @@ class DataPlot(threading.Thread):
         self._y_factor = y_factor
         self._y_lim = y_lim
         self._refresh_rate=refresh_rate
+        self._bs = BoundedSemaphore(ctx=None)
     
     def set_deadline(self, deadline):
         """ Sets the same deadline for all subplots.
@@ -101,6 +103,10 @@ class DataPlot(threading.Thread):
     def do_other_actions(self, data_dict):  
         pass 
       
+    def disable_updates(self):
+        self._bs.acquire()
+    def enable_updates(self):
+        self._bs.release()
     def __run(self):
         """ Main plotting action"""
         
@@ -111,12 +117,14 @@ class DataPlot(threading.Thread):
         x_lim=None
         """ Sets the same x_lim for all subplots so the difference in deadlines
         for all plots can be observed."""
-        if (self._deadline_list):
-            x_max = max([(deadline-self._start_time)*0.10+deadline
-                         for deadline in self._deadline_list])
-            x_lim = (self._start_time, x_max)
+        
 
         while not self.killed:
+            self.disable_updates()
+            if (self._deadline_list):
+                x_max = max([(deadline-self._start_time)*0.10+deadline
+                         for deadline in self._deadline_list])
+                x_lim = (self._start_time, x_max)
             """ Reads data """
             data_dict={x:self.get_data_file(x) for x in self._file_monitors }
             
@@ -174,7 +182,7 @@ class DataPlot(threading.Thread):
                     else:
                         extra= (deadline-self._start_time)*0.10
                         ax.set_xlim((self._start_time, deadline+extra))
-            
+            self.enable_updates()
             if not self.killed:
                 display.display(plt.show())
                 display.clear_output(wait=True)
