@@ -5,3 +5,5 @@ numpy
 pymongo
 matplotlib
 psutil
+requests
+requests_mock

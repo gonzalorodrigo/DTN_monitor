@@ -7,10 +7,12 @@ import sys
 import threading
 import time
 
+import requests
+
 from filemon import FileMonitor
 import filemon.graph as gr
 import filemon.rest_reporter as rr
-import requests
+
 
 class IntCapturer(object):
     
@@ -95,6 +97,7 @@ class RestPuller(threading.Thread):
         self._api_url=api_url
         self._killed=False
         self._update_period_s=update_period_s
+        self.changes_receiver=changes_receiver
         threading.Thread.__init__(self, *args, **keywords)
     
     def get_url(self):
@@ -102,26 +105,32 @@ class RestPuller(threading.Thread):
                                          self._api_url))
     def stop_threads(self):
         self._killed=True
+    def start(self):
+        self.__run_backup = self.run
+        self.run = self.__run
+        self._start_time=time.time()
+        self._killed=False
+        threading.Thread.start(self)
+        
     def __run(self):
         while not self._killed:
-            changes_dict = self._get_changes()
+            changes_dict = self.get_changes()
             if changes_dict:
-                self.changes_receiver.process_changes(changes_dict)
-            if not self.killed:
+                self.changes_receiver(changes_dict)
+            if not self._killed:
                 time.sleep(self._update_period_s)
     def get_changes(self):
         get_url = self.get_url()
         try:
             results = requests.get(get_url)
         except requests.exceptions.RequestException:
-            None
+            return None
         if results.status_code==200:
-            return self.decode_reponse(results.content)
-            
+            return self.decode_response(results)
         else: 
             return None
     def decode_response(self, content):
-        return None
+        return content.json()
     
 
 class RestOrchestrator(object):
