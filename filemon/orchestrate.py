@@ -112,7 +112,7 @@ class RestPuller(threading.Thread):
     def get_changes(self):
         get_url = self.get_url()
         try:
-            results = requests.put(get_url)
+            results = requests.get(get_url)
         except requests.exceptions.RequestException:
             None
         if results.status_code==200:
@@ -165,14 +165,17 @@ class RestOrchestrator(object):
         return [x.monitor_output_file for x in self.get_field("file_monitor")]
     
     def signal_handler(self, signal, frame):
+        self.stop_theads()
+        print ("Exit of threads completed")
+          
+    def stop_theads(self):
         self._graph_manager.stop_threads()
         if self._rest_puller:
             self._rest_puller.stop_threads()
         for obj in self.get_field("file_monitor"):
             obj.stop_threads()
-        print ("Exit of threads completed")
-          
-    
+
+        
     def create_monitor(self, file_route, expected_size):
         self._monitor_count+=1
         file_monitor = "monitor.{}.{}".format(self._monitor_count,
