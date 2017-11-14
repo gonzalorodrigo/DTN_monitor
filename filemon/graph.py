@@ -168,7 +168,7 @@ class DataPlot(threading.Thread):
                                 linestyle="-",
                                 color="red")
                 ax_percent.set_ylabel('% completed"')
-                ax_percent.set_ylim((0.0, 100.0))
+                ax_percent.set_ylim((0.0, 105.0))
                 
                 if (self._deadline):
                     ax.axvline(self._deadline)
@@ -184,6 +184,7 @@ class DataPlot(threading.Thread):
                         ax.set_xlim((self._start_time, deadline+extra))
             self.enable_updates()
             if not self.killed:
+                plt.tight_layout()
                 display.display(plt.show())
                 display.clear_output(wait=True)
                 time.sleep(self._refresh_rate)
